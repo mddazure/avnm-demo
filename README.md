@@ -4,16 +4,20 @@ This is a lab to demonstrate and experiment with [Azure Virtual Network Manager]
 
 ## Components
 The lab consists of following elements:
-- A set of VNETs; quantity is controlled by the `copies` parameter, (default: 20).
-- Windows Server VMs in VNETs 0, 1, 2, and `copies`/2 (default: 10), `copies`/2+1 (11), `copies`/2+2 (12). Each VM runs a basic webpage that returns the VM name.
+- A set of VNETs.
+  - Quantity is controlled by the `copies` parameter, (default: 20).
+- Windows Server VMs in VNETs 0, 1, 2, and `copies`/2 (default: 10), `copies`/2+1 (11), `copies`/2+2 (12).
+  - Each VM runs a basic webpage that returns the VM name.
 - Bastion Hosts in VNETs 0 and `copies/2` (10).
 - AVNM instance `avnm` scoped to the subscription.
-- Network Groups `production-networkgroup` and `development-networkgroup`, containing VNETs 1 - `copies`/2-1 (9) and `copies`/2+1 (11) - `copies` (20) respectively.
+- Network Groups
+  -  `production-networkgroup` contains VNETs 1 - `copies`/2-1 (9).
+  -  `development-networkgroup` contains `copies`/2+1 (11) - `copies` (20).
 - Network Configurations `production-hubspokemesh` and `development-hubspokemesh`, implementing a Hub&spoke with DirectConnectivity topology for the respective Network Groups.
 - Security Configuration `secadminrule`,
   - Rule Collections `secadminrulecoll-production` and `secadminrulecoll-development`, each containing rules allowing communication within the respective Network Groups only (i.e. Production can only send traffic to Production, not to Development)
   - Rule Collection `no-internet` blocking outbound traffic from both Network Groups.
-- VNET Gateways in VNETs 0 and `copies/2` (10) (the hubs of the Hub&spoke configurations for both Network Groups), with a VPN tunnel between them.
+- VNET Gateways in VNETs 0 and `copies/2` (10) (the hubs of the Hub&spoke configurations for both Network Groups), with a VPN tunnel with BGP between them.
 
 ![image](images/avnmdemo.png)
 
@@ -125,7 +129,7 @@ Listing Effective security rules on any nic will not show anything: Security Adm
 There currently is no method to view Security Admin Rules applied to VNETs or NICs.
 
 ### Connectivity
-Use Bastion Host in a Hub VNETs to log in to the VM in the Hub.
+Use Bastion Host in a Hub VNET to log in to the VM in the Hub.
 
 Use `curl 10.0.{spoke number}.4` toerify that it is possible to connect to VMs in Spokes in the same Network Group, but not in the other Group. Verify that there is no internet access from the VM. 
 
