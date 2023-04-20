@@ -2,7 +2,7 @@
 param adminUsername string = 'AzureAdmin'
 
 @description('Password for the Virtual Machine.')
-param adminPassword string = 'ANMtest-2020'
+param adminPassword string = 'ANMtest-2023'
 
 @description('Location for all resources.')
 param location string = 'westeurope'
@@ -12,12 +12,7 @@ param location string = 'westeurope'
 @maxValue(254)
 param copies int = 20
 
-@allowed([
-  'Standard_A1_v2'
-  'Standard_A2_v2'
-  'Standard_A4_v2'
-])
-param vmsize string = 'Standard_A1_v2'
+param vmsize string = 'Standard_DS2_v5'
 
 @description('Prefix Name of VNETs')
 param virtualNetworkName string = 'anm-vnet-'
@@ -475,11 +470,11 @@ resource secadminrulecollall 'Microsoft.Network/networkManagers/securityAdminCon
 }
 
 resource nointernet 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2022-04-01-preview'= {
-  name: 'nointernet'
+  name: 'no-internet'
   parent: secadminrulecollall
   kind: 'Custom'
   properties: {
-    priority: 500
+    priority: 1000
     access: 'Deny'
     direction: 'Outbound'
     protocol: 'Any'
@@ -505,7 +500,7 @@ resource nointernet 'Microsoft.Network/networkManagers/securityAdminConfiguratio
 }
 
 resource secadminrulecollprod 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections@2022-09-01' = {
-  name: 'secadminrulecollprod'
+  name: 'secadminrulecoll-production'
   parent: secadminrule
   properties: {
     appliesToGroups: [
@@ -547,7 +542,7 @@ resource allowprod 'Microsoft.Network/networkManagers/securityAdminConfiguration
 }]
 
 resource secadminrulecolldev 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections@2022-09-01' = {
-  name: 'secadminrulecolldev'
+  name: 'secadminrulecoll-development'
   parent: secadminrule
 
   properties: {
@@ -560,7 +555,7 @@ resource secadminrulecolldev 'Microsoft.Network/networkManagers/securityAdminCon
 }
 
 resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2022-04-01-preview'= [for c in range(copies/2,copies/2): {
-  name: 'allowprod-${c}'
+  name: 'allowdev-${c}'
   parent: secadminrulecolldev
   kind: 'Custom'
   properties: {
@@ -588,4 +583,3 @@ resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations
     ]
   }
 }]
-
