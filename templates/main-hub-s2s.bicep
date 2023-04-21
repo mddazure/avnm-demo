@@ -12,7 +12,7 @@ param location string = 'westeurope'
 @maxValue(254)
 param copies int = 20
 
-param vmsize string = 'Standard_DS2_v5'
+param vmsize string = 'Standard_D2s_v5'
 
 @description('Prefix Name of VNETs')
 param virtualNetworkName string = 'anm-vnet-'
@@ -63,6 +63,9 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           delegations: []
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
+          networkSecurityGroup: {
+            id: avnmnsg.id
+          }
         }
       }
       {
@@ -86,6 +89,15 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
     ]
   }
 }]
+resource avnmnsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
+  name: 'anvm-nsg'
+  location: location
+  properties: {
+    securityRules: [
+
+    ]
+  }
+}
 
 resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,copies/2]: {
   name: 'hubbastion-${i}'

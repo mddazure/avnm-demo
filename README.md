@@ -122,16 +122,19 @@ Observe single entry for all VNETs in the Network Group with Next Hop Type Conne
 
 ### Effective Security Rules
 
-Listing Effective security rules on any nic will not show anything: Security Admin rules are not listed as NSG rules on individual NICs
+Listing Effective security rules in the portal, on a VM NIC in one of the Network Groups, shows separate entries for the NSG attached to the subnet and the Admin Rules programmed by AVNM.
 
-`az network nic list-effective-nsg --name VMNic-0 -g {rgname} -o table`
+#### NSG Rules
+![image](images/nsg-rules.png)
 
-There currently is no method to view Security Admin Rules applied to VNETs or NICs.
+#### Security Admin Rules
+![image](images/admin-security-rules.png)
+
 
 ### Connectivity
 Use Bastion Host in a Hub VNET to log in to the VM in the Hub.
 
-Use `curl 10.0.{spoke number}.4` toerify that it is possible to connect to VMs in Spokes in the same Network Group, but not in the other Group. Verify that there is no internet access from the VM. 
+Use `curl 10.0.{spoke number}.4` to verify that it is possible to connect to VMs in Spokes in the same Network Group, but not in the other Group. Verify that there is no internet access from the VM. 
 
 Routes to other VMs exist, but outbound access is restricted by the Security Admin Rules.
 
