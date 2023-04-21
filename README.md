@@ -4,18 +4,23 @@ This is a lab to demonstrate and experiment with [Azure Virtual Network Manager]
 
 ## Components
 The lab consists of following elements:
-- A set of VNETs.
+- A set of VNETs:
   - Quantity is controlled by the `copies` parameter, (default: 20).
-- Windows Server VMs in VNETs 0, 1, 2, and `copies`/2 (default: 10), `copies`/2+1 (11), `copies`/2+2 (12).
+- Network Security Group:
+  - Applied to the subnet `vmSubnet` in each VNET.
+  - Contains an outbound rule denying traffic to private (RFC1918) ranges.
+- Windows Server VMs:
+  - In VNETs 0, 1, 2, and `copies`/2 (default: 10), `copies`/2+1 (11), `copies`/2+2 (12).
   - Each VM runs a basic webpage that returns the VM name.
-- Bastion Hosts in VNETs 0 and `copies/2` (10).
-- AVNM instance `avnm` scoped to the subscription.
-- Network Groups
+- Bastion Hosts:
+  - In VNETs 0 and `copies/2` (10).
+- An AVNM instance `avnm`, scoped to the subscription.
+- Network Groups:
   -  `production-networkgroup` contains VNETs 1 - `copies`/2-1 (9).
   -  `development-networkgroup` contains `copies`/2+1 (11) - `copies` (20).
 - Network Configurations `production-hubspokemesh` and `development-hubspokemesh`, implementing a Hub&spoke with DirectConnectivity topology for the respective Network Groups.
 - Security Configuration `secadminrule`,
-  - Rule Collections `secadminrulecoll-production` and `secadminrulecoll-development`, each containing rules allowing communication within the respective Network Groups only (i.e. Production can only send traffic to Production, not to Development)
+  - Rule Collections `secadminrulecoll-production` and `secadminrulecoll-development`, each containing Allow rules, permitting communication within the respective Network Groups only (i.e. Production can only send traffic to Production, not to Development)
   - Rule Collection `no-internet` blocking outbound traffic from both Network Groups.
 - VNET Gateways in VNETs 0 and `copies/2` (10) (the hubs of the Hub&spoke configurations for both Network Groups), with a VPN tunnel with BGP between them.
 
@@ -130,18 +135,39 @@ Listing Effective security rules in the portal, on a VM NIC in one of the Networ
 #### Security Admin Rules
 ![image](images/admin-security-rules.png)
 
-
 ### Connectivity
-Use Bastion Host in a Hub VNET to log in to the VM in the Hub.
+Routes to other VMs exist, but outbound access is controlled by NSG- and the Security Admin Rules. 
+- The Security Admin Rule collections contain Allow rules for each Network Groups' prefixes.
+- Traffic permitted by Security Admin Rules with action Allow is subsequently evaluated by any NSGs attached to the subnet or NIC.
+- The NSG attached to the subnet contains a rule blocking outbound communication to RFC1918 ranges.
 
-Use `curl 10.0.{spoke number}.4` to verify that it is possible to connect to VMs in Spokes in the same Network Group, but not in the other Group. Verify that there is no internet access from the VM. 
+#### From a Hub
+Use Bastion Host in a Hub VNET to log in to the VM in that Hub.
 
-Routes to other VMs exist, but outbound access is restricted by the Security Admin Rules.
+Use `curl 10.0.{spoke number}.4` to check it is possible to connect to VMs in Spokes in the same Network Group, and in the other Group. Verify that there is internet access from the VM. 
 
-Remove the Security Admin Deployment.
+It will not be possible to connect to any Spoke VM from a Hub. 
 
-Verify that the VM can now reach VMs in the other Group, and has internet access.
+Reason: The Hubs are not controlled by AVNM as they are not part of any Network Group, so they do not have any Security Admin Rules applied. However, the normal NSG applied to the vmSubnet in all VNETs including Hubs has a rule blocking all outbound traffic to RFC1918 prefixes.
 
+#### From a Spoke
+Use Bastion Host in a Hub VNET to log in to the VM in a spoke connected to that Hub.
+
+Use `curl 10.0.{spoke number}.4` to check whether is possible to connect to VMs in Spokes in the same Network Group, and in the other Group. Verify that there is no internet access from the VM. 
+
+It will not be possible to any Spoke. 
+
+Reason: The Spokes have both the Security Admin Rules and the NSG applied. The Security Admin Rules contain rules explicitly permitting outbound traffic to Spokes in the same Network Group. However, the Action on these rules is set to Allow - not Always Allow. This means that traffic permitted is still evaluated by the NSG, which blocks all outbound traffic to RFC1918 prefixec.
+
+Now modify the Action to Always Allow and redeploy the configuration.
+
+Check connectivity from Spoke to other Spokes again. It should now be possible to connect to Spokes in the same Network Group, as the Security Admin Rules allow outbound to the prefixes in the Group and are set to Always Allow.
+
+### Monitoring and Logging
+
+#### NSG Flows Logs
+
+#### Network Watcher Diagnostics
  
 
 

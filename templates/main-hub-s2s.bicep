@@ -94,10 +94,36 @@ resource avnmnsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
   location: location
   properties: {
     securityRules: [
+      {
+        name: 'denyRFC1918-out'
+        properties: {
+          priority: 150
+          protocol: '*'
+          access: 'Deny'
+          direction: 'Outbound'
+          destinationAddressPrefixes: [
+            '10.0.0.0/8'
+            '172.16.0.0/12'
+            '192.168.0.0/24'
+          ]
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          sourcePortRange:'*'
+        }
+      }
 
     ]
   }
 }
+resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+  name: 'flowlogst'
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+}
+
 
 resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,copies/2]: {
   name: 'hubbastion-${i}'
