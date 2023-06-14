@@ -52,7 +52,7 @@ Create a new resource group:
 
 Deploy the bicep template:
 
-`az deployment group create -g {rgname} --template-file main-hub-s2s.bicep`
+`az deployment group create -g {rgname} --template-file templates/main-hub-s2s.bicep`
 
 ## AVNM Configuration Deployment
 The Network- and Security Configurations need to be deployed to take effect. This may be achieved from the Network Manager page in the portal, under Settings -> Deployments -> Deploy configurations. 

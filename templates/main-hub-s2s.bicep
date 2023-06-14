@@ -36,6 +36,9 @@ param nicName string = 'VMNic-'
 @description('Prefix name of the nic of the vm')
 param vmName string = 'VM-'
 
+@description('Flow log storage account name')
+param flowlogSt string = 'flowlog-${utcNow()}'
+
 //var customImageId = '/subscriptions/0245be41-c89b-4b46-a3cc-a705c90cd1e8/resourceGroups/image-gallery-rg/providers/Microsoft.Compute/galleries/mddimagegallery/images/windows2019-networktools/versions/2.0.0'
 
 var imagePublisher = 'MicrosoftWindowsServer'
@@ -116,7 +119,7 @@ resource avnmnsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
   }
 }
 resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
-  name: 'flowlogst'
+  name: flowlogSt
   location: location
   sku: {
     name: 'Standard_LRS'
