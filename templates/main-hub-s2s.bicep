@@ -37,7 +37,7 @@ param nicName string = 'VMNic-'
 param vmName string = 'VM-'
 
 @description('Flow log storage account name')
-param flowlogSt string = 'flowlog-${utcNow()}'
+param flowlogSt string = 'flowlog${toLower(utcNow())}'
 
 //var customImageId = '/subscriptions/0245be41-c89b-4b46-a3cc-a705c90cd1e8/resourceGroups/image-gallery-rg/providers/Microsoft.Compute/galleries/mddimagegallery/images/windows2019-networktools/versions/2.0.0'
 
