@@ -29,6 +29,7 @@ param sourceIPaddressRDP string = '217.121.229.32'
 param subnetName string = 'vmSubnet'
 param gwsubnetName string = 'GatewaySubnet'
 param bastionsubnetName string = 'AzureBastionSubnet'
+param firewallsubnetName string = 'AzureFirewallSubnet'
 
 @description('Prefix name of the nic of the vm')
 param nicName string = 'VMNic-'
@@ -62,13 +63,22 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
       {
         name: subnetName
         properties: {
-          addressPrefix: '10.0.${i}.0/25'
+          addressPrefix: '10.0.${i}.0/26'
           delegations: []
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
           networkSecurityGroup: {
             id: avnmnsg.id
           }
+        }
+      }
+      {
+        name: firewallsubnetName
+        properties: {
+          addressPrefix: '10.0.${i}.64/26'
+          delegations: []
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
         }
       }
       {
@@ -126,7 +136,112 @@ resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
   kind: 'StorageV2'
 }
+resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [0,copies/2]: {
+  name: 'hubfirewall-${i}'
+  location: location
+  dependsOn:[
+    flowlogst
+    virtualNetwork
+  ]
+  tags:{
+    group: (i<copies/2 ? virtualNetworkTagGr1 : virtualNetworkTagGr2)
+  }
+  zones: [
+    '1'
+    '2'
+    '3'
+  ]
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipConfig'
+        properties: {
+          subnet: {
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallsubnetName)
+          }
+          publicIPAddress: {
+              id: hubfirewallpip[i].id
+            }
+          }
+        }
+      ]    
+    sku: {
+      tier: 'Premium'
+      name: 'AZFW_VNet'
+    }
+    firewallPolicy: {
+      id: hubfirewallpolicy.id
+    }
+  }
 
+}]
+resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies/2]: {
+  name: 'hubfirewallpip-${i}'
+  location: location
+  sku: {
+    tier: 'Regional'
+    name: 'Standard'
+  }
+  zones: [
+    '1'
+    '2'
+    '3'
+  ]
+  properties: {
+    publicIPAddressVersion: 'IPv4'
+    publicIPAllocationMethod: 'Static'
+  }
+}]
+
+resource hubfirewallpolicy 'Microsoft.Network/firewallPolicies@2024-03-01' = {
+  name: 'hubfirewallpolicy'
+  location: location
+
+  properties: {
+    sku: {
+      tier: 'Premium'
+    }
+}
+
+resource hubfirewallpolicy_RuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2020-11-01' = {
+  parent: hubfirewallpolicy
+  name: 'NetworkRuleCollectionGroup'
+  properties: {
+    priority: 200
+    ruleCollections: [
+      {
+        ruleCollectionType: 'FirewallPolicyFilterRuleCollection'
+        action: {
+          type: 'Allow'
+        }
+        rules: [
+          {
+            ruleType: 'NetworkRule'
+            name: 'AllowDNS'
+            ipProtocols: [
+              'TCP'
+              'UDP'
+            ]
+            sourceAddresses: [
+              '*'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '8.8.8.8'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '53'
+            ]
+          }
+        ]
+        name: 'AllowNetwork'
+        priority: 120
+      }
+    ]
+  }
+}  
 
 resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,copies/2]: {
   name: 'hubbastion-${i}'
