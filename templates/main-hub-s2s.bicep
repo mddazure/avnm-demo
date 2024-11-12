@@ -136,6 +136,7 @@ resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
   kind: 'StorageV2'
 }
+
 resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [0,copies/2]: {
   name: 'hubfirewall-${i}'
   location: location
@@ -161,7 +162,7 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
             id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallsubnetName)
           }
           publicIPAddress: {
-              id: hubfirewallpip[i].id
+              id: hubfirewallpip[i-1].id
             }
           }
         }
