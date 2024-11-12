@@ -142,6 +142,7 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
   dependsOn:[
     flowlogst
     virtualNetwork
+    hubfirewallpip
   ]
   tags:{
     group: (i<copies/2 ? virtualNetworkTagGr1 : virtualNetworkTagGr2)
