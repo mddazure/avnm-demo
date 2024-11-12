@@ -5,7 +5,7 @@ param adminUsername string = 'AzureAdmin'
 param adminPassword string = 'ANMtest-2023'
 
 @description('Location for all resources.')
-param location string = 'westeurope'
+param location string = 'swedencentral'
 
 @description('Number of VNETs and VMs to deploy')
 @minValue(1)
@@ -23,7 +23,7 @@ param virtualNetworkTagGr2 string = 'Development'
 param rgName string = resourceGroup().name
 
 @description('remote desktop source address')
-param sourceIPaddressRDP string = '217.121.228.158'
+param sourceIPaddressRDP string = '217.121.229.32'
 
 @description('Name of the subnet to create in the virtual network')
 param subnetName string = 'vmSubnet'
