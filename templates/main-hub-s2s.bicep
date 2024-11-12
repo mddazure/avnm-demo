@@ -162,7 +162,7 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
             id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallsubnetName)
           }
           publicIPAddress: {
-              id: hubfirewallpip[i-1].id
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-${i}')
             }
           }
         }
