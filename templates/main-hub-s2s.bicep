@@ -201,6 +201,7 @@ resource hubfirewallpolicy 'Microsoft.Network/firewallPolicies@2024-03-01' = {
     sku: {
       tier: 'Premium'
     }
+  }
 }
 
 resource hubfirewallpolicy_RuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2020-11-01' = {
@@ -486,7 +487,7 @@ resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-
    ]
 }]
 
-resource avnm 'Microsoft.Network/networkManagers@2022-09-01' = {
+/*resource avnm 'Microsoft.Network/networkManagers@2022-09-01' = {
   name: 'avnm'
   location: location
   properties: {
@@ -738,4 +739,4 @@ resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations
       }
     ]
   }
-}]
+}]*/
