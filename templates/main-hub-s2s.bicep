@@ -176,16 +176,17 @@ resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   kind: 'StorageV2'
 }
 
-resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [0,copies]: {
-  name: 'hubfirewall-${i}'
+resource hubfirewall1 'Microsoft.Network/azureFirewalls@2024-03-01' = {
+  name: 'hubfirewall-0'
   location: location
   dependsOn:[
     flowlogst
     virtualNetwork
     hubfirewallpip
+    hubfirewallmanagementpip
   ]
   tags:{
-    group: (i<copies/2 ? virtualNetworkTagGr1 : virtualNetworkTagGr2)
+    group: virtualNetworkTagGr1
   }
   zones: [
     '1'
@@ -198,10 +199,10 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
         name: 'ipConfig'
         properties: {
           subnet: {
-            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallsubnetName)
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-0', firewallsubnetName)
           }
           publicIPAddress: {
-              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-${i}')
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-0')
             }
           }
         }
@@ -210,10 +211,10 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
         name: 'managementIpConfig'
         properties: {
           subnet: {
-            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallmanagementsubnetName)
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-0', firewallmanagementsubnetName)
           }
           publicIPAddress: {
-              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-${i}')
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-0')
             }
           }   
         }
@@ -225,7 +226,58 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
       id: hubfirewallpolicy.id
     }
   }
-}]
+}
+resource hubfirewall2 'Microsoft.Network/azureFirewalls@2024-03-01' = {
+  name: 'hubfirewall-${copies}'
+  location: location
+  dependsOn:[
+    flowlogst
+    virtualNetwork
+    hubfirewallpip
+    hubfirewallmanagementpip
+  ]
+  tags:{
+    group: virtualNetworkTagGr2
+  }
+  zones: [
+    '1'
+    '2'
+    '3'
+  ]
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipConfig'
+        properties: {
+          subnet: {
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${copies}', firewallsubnetName)
+          }
+          publicIPAddress: {
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-${copies}')
+            }
+          }
+        }
+      ]
+    managementIpConfiguration: {
+        name: 'managementIpConfig'
+        properties: {
+          subnet: {
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${copies}', firewallmanagementsubnetName)
+          }
+          publicIPAddress: {
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-${copies}')
+            }
+          }   
+        }
+    sku: {
+      tier: 'Premium'
+      name: 'AZFW_VNet'
+    }
+    firewallPolicy: {
+      id: hubfirewallpolicy.id
+    }
+  }
+}
 resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]: {
   name: 'hubfirewallpip-${i}'
   location: location
