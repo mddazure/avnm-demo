@@ -30,6 +30,7 @@ param subnetName string = 'vmSubnet'
 param gwsubnetName string = 'GatewaySubnet'
 param bastionsubnetName string = 'AzureBastionSubnet'
 param firewallsubnetName string = 'AzureFirewallSubnet'
+param firewallmanagementsubnetName string = 'AzureFirewallManagementSubnet'
 
 @description('Prefix name of the nic of the vm')
 param nicName string = 'VMNic-'
@@ -47,7 +48,35 @@ var imageOffer = 'WindowsServer'
 var imageSku = '2022-Datacenter'
 
 
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in range(0, copies): {
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in range(1, copies-1): {
+  name: '${virtualNetworkName}${i}'
+  location: location
+  tags:{
+    group: (i<copies/2 ? virtualNetworkTagGr1 : virtualNetworkTagGr2)
+  }
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        '10.0.${i}.0/24'
+      ]
+    }
+    subnets: [
+      {
+        name: subnetName
+        properties: {
+          addressPrefix: '10.0.${i}.0/26'
+          delegations: []
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+          networkSecurityGroup: {
+            id: avnmnsg.id
+          }
+        }
+      }
+    ]
+  }
+}]
+resource virtualNetworkHub 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in [0,copies]: {
   name: '${virtualNetworkName}${i}'
   location: location
   tags:{
@@ -82,6 +111,15 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
         }
       }
       {
+        name: firewallmanagementsubnetName
+        properties: {
+          addressPrefix: '10.0.${i}.128/26'
+          delegations: []
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+        }
+      }
+      {
         name: gwsubnetName
         properties: {
           addressPrefix: '10.0.${i}.128/27'
@@ -102,6 +140,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
     ]
   }
 }]
+
 resource avnmnsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
   name: 'anvm-nsg'
   location: location
@@ -137,7 +176,7 @@ resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   kind: 'StorageV2'
 }
 
-resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [0,copies/2]: {
+resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [0,copies]: {
   name: 'hubfirewall-${i}'
   location: location
   dependsOn:[
@@ -166,6 +205,18 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
             }
           }
         }
+        {
+        name: 'managementIpConfig'
+        properties: {
+          subnet: {
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallmanagementsubnetName)
+          }
+          publicIPAddress: {
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-${i}')
+            }
+          }   
+        }
+      
       ]    
     sku: {
       tier: 'Premium'
@@ -175,9 +226,8 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
       id: hubfirewallpolicy.id
     }
   }
-
 }]
-resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies/2]: {
+resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]: {
   name: 'hubfirewallpip-${i}'
   location: location
   sku: {
@@ -194,7 +244,23 @@ resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for 
     publicIPAllocationMethod: 'Static'
   }
 }]
-
+resource hubfirewallmanagementpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]: {
+  name: 'hubfirewallmanagementpip-${i}'
+  location: location
+  sku: {
+    tier: 'Regional'
+    name: 'Standard'
+  }
+  zones: [
+    '1'
+    '2'
+    '3'
+  ]
+  properties: {
+    publicIPAddressVersion: 'IPv4'
+    publicIPAllocationMethod: 'Static'
+  }
+}]
 resource hubfirewallpolicy 'Microsoft.Network/firewallPolicies@2024-03-01' = {
   name: 'hubfirewallpolicy'
   location: location
@@ -246,7 +312,7 @@ resource hubfirewallpolicy_RuleCollectionGroup 'Microsoft.Network/firewallPolici
   }
 }  
 
-resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,copies/2]: {
+resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,copies]: {
   name: 'hubbastion-${i}'
   dependsOn:[
     bastionpip
@@ -275,7 +341,7 @@ resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,c
   }
 }]
 
-resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies/2]: {
+resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]: {
   name: 'hubbastionpip-${i}'
   location: location
   sku: {
@@ -291,7 +357,7 @@ resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
   }
 }]
 
-resource hubgw 'Microsoft.Network/virtualNetworkGateways@2022-09-01' = [for i in [0,copies/2]:{
+resource hubgw 'Microsoft.Network/virtualNetworkGateways@2022-09-01' = [for i in [0,copies]:{
   name: 'hubgw-${i}'
   location: location
   tags:{
@@ -370,7 +436,7 @@ resource connhighlow 'Microsoft.Network/connections@2022-09-01' = {
   }
 }
 
-resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies/2]:{
+resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]:{
   name: 'hubgwpip-${i}'
   location: location
   sku: {
@@ -388,7 +454,7 @@ resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
   }
 }]
 
-resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2,copies/2,(copies/2)+1,(copies/2+2)]: {
+resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
   name: '${nicName}${i}'
   location: location
   properties: {
@@ -410,7 +476,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2
 }]
 
 
-resource vm 'Microsoft.Compute/virtualMachines@2018-10-01' = [for i in [0,1,2,copies/2,(copies/2)+1,(copies/2+2)]: {
+resource vm 'Microsoft.Compute/virtualMachines@2018-10-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
   name: '${vmName}${i}'
   location: location
   tags:{
@@ -456,7 +522,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2018-10-01' = [for i in [0,1,2,co
   ]
 }]
 
-resource vmName_Microsoft_Azure_NetworkWatcher 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,copies/2,(copies/2+1),(copies/2+2)]: {
+resource vmName_Microsoft_Azure_NetworkWatcher 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
   name: '${vmName}${i}/Microsoft.Azure.NetworkWatcher'
   location: location
   properties: {
@@ -470,7 +536,7 @@ resource vmName_Microsoft_Azure_NetworkWatcher 'Microsoft.Compute/virtualMachine
   ]
 }]
 
-resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,copies/2,(copies/2+1),(copies/2+2)]: {
+resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
   name: '${vmName}${i}/IISExtension'
   location: location
   properties: {
@@ -489,7 +555,7 @@ resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-
    ]
 }]
 
-/*resource avnm 'Microsoft.Network/networkManagers@2022-09-01' = {
+resource avnm 'Microsoft.Network/networkManagers@2022-09-01' = {
   name: 'avnm'
   location: location
   properties: {
@@ -538,7 +604,7 @@ resource networkgr1_static 'Microsoft.Network/networkManagers/networkGroups/stat
 }]
 
 
-resource networkgr2_static 'Microsoft.Network/networkManagers/networkGroups/staticMembers@2022-09-01' = [for c in range(copies/2+1,copies/2-1): {
+resource networkgr2_static 'Microsoft.Network/networkManagers/networkGroups/staticMembers@2022-09-01' = [for c in range(copies/2,copies-1): {
   name: 'development_${c-(copies/2)}'
   parent: devnetworkgr
   dependsOn:[
@@ -713,7 +779,7 @@ resource secadminrulecolldev 'Microsoft.Network/networkManagers/securityAdminCon
   }
 }
 
-resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2022-04-01-preview'= [for c in range(copies/2,copies/2): {
+resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2022-04-01-preview'= [for c in range(copies/2,copies): {
   name: 'allowdev-${c}'
   parent: secadminrulecolldev
   kind: 'Custom'
@@ -741,4 +807,4 @@ resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations
       }
     ]
   }
-}]*/
+}]
