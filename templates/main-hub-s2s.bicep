@@ -92,7 +92,7 @@ resource virtualNetworkHub 'Microsoft.Network/virtualNetworks@2019-09-01' = [for
       {
         name: subnetName
         properties: {
-          addressPrefix: '10.0.${i}.0/26'
+          addressPrefix: '10.0.${i}.0/27'
           delegations: []
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
@@ -101,6 +101,15 @@ resource virtualNetworkHub 'Microsoft.Network/virtualNetworks@2019-09-01' = [for
           }
         }
       }
+      {
+        name: gwsubnetName
+        properties: {
+          addressPrefix: '10.0.${i}.32/27'
+          delegations: []
+          privateEndpointNetworkPolicies: 'Enabled'
+          privateLinkServiceNetworkPolicies: 'Enabled'
+        }
+      }      
       {
         name: firewallsubnetName
         properties: {
@@ -114,15 +123,6 @@ resource virtualNetworkHub 'Microsoft.Network/virtualNetworks@2019-09-01' = [for
         name: firewallmanagementsubnetName
         properties: {
           addressPrefix: '10.0.${i}.128/26'
-          delegations: []
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-        }
-      }
-      {
-        name: gwsubnetName
-        properties: {
-          addressPrefix: '10.0.${i}.128/27'
           delegations: []
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
