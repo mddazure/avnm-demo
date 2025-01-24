@@ -711,7 +711,7 @@ resource devhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigur
     hubs: [
       {
         resourceType: 'Microsoft.Network/virtualNetworks'
-        resourceId: virtualNetwork[copies/2].id
+        resourceId: virtualNetwork[copies].id
       }
       
     ]
