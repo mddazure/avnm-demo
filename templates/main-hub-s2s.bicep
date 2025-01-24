@@ -205,7 +205,8 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
             }
           }
         }
-        {
+      ]
+    managementIpConfiguration: {
         name: 'managementIpConfig'
         properties: {
           subnet: {
@@ -216,8 +217,6 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-03-01' = [for i in [
             }
           }   
         }
-      
-      ]    
     sku: {
       tier: 'Premium'
       name: 'AZFW_VNet'
@@ -452,7 +451,6 @@ resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
     publicIPAllocationMethod: 'Static'
   }
 }]
-
 resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
   name: '${nicName}${i}'
   location: location
@@ -473,8 +471,6 @@ resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2
     virtualNetwork
   ]
 }]
-
-
 resource vm 'Microsoft.Compute/virtualMachines@2018-10-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
   name: '${vmName}${i}'
   location: location
