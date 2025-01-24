@@ -356,7 +356,6 @@ resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
     publicIPAllocationMethod: 'Static'
   }
 }]
-
 resource hubgw 'Microsoft.Network/virtualNetworkGateways@2022-09-01' = [for i in [0,copies]:{
   name: 'hubgw-${i}'
   location: location
