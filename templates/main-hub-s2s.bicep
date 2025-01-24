@@ -599,11 +599,12 @@ resource networkgr1_static 'Microsoft.Network/networkManagers/networkGroups/stat
 }]
 
 
-resource networkgr2_static 'Microsoft.Network/networkManagers/networkGroups/staticMembers@2022-09-01' = [for c in range(copies/2,copies-1): {
+resource networkgr2_static 'Microsoft.Network/networkManagers/networkGroups/staticMembers@2022-09-01' = [for c in range(copies/2,copies/2-1): {
   name: 'development_${c-(copies/2)}'
   parent: devnetworkgr
   dependsOn:[
     virtualNetwork
+    networkgr1_static
   ]
   properties: {
     resourceId: virtualNetwork[c].id
