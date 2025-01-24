@@ -235,6 +235,7 @@ resource hubfirewall2 'Microsoft.Network/azureFirewalls@2024-03-01' = {
     virtualNetwork
     hubfirewallpip
     hubfirewallmanagementpip
+    hubfirewall1
   ]
   tags:{
     group: virtualNetworkTagGr2
