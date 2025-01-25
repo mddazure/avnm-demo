@@ -451,7 +451,7 @@ resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
   }
 }]
 /*=============================================================VIRTUAL MACHINES========================================================================================*/
-resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
+resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2,(copies/2),(copies/2+1),copies/2+2]: {
   name: '${nicName}${i}'
   location: location
   properties: {
