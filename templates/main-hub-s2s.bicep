@@ -83,7 +83,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           }
         }
       }    
-      (i==0 || i==copies/2?{
+      {
         name: gwsubnetName
         properties: {
           addressPrefix: '10.0.${i}.32/27'
@@ -91,8 +91,8 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
-      }:{})     
-      (i==0 || i==copies/2?{
+      }   
+      {
         name: firewallsubnetName
         properties: {
           addressPrefix: '10.0.${i}.64/26'
@@ -100,8 +100,8 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
-      }:{}) 
-      (i==0 || i==copies/2?{
+      }
+      {
         name: firewallmanagementsubnetName
         properties: {
           addressPrefix: '10.0.${i}.128/26'
@@ -109,8 +109,8 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
-      }:{})
-      (i==0 || i==copies/2?{
+      }
+      {
         name: bastionsubnetName
         properties: {
           addressPrefix: '10.0.${i}.192/26'
@@ -118,7 +118,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
-      }:{})
+      }
     ]
   }
 }]
