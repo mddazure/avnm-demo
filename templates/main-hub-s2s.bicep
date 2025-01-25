@@ -50,6 +50,9 @@ var imageSku = '2022-Datacenter'
 resource prefix 'Microsoft.Network/publicIPPrefixes@2024-05-01' = {
   name: 'prefix'
   location: location
+  sku: {
+    name: 'Standard'
+  }
   properties: {
     prefixLength: 27
   }
