@@ -39,7 +39,7 @@ param nicName string = 'VMNic-'
 param vmName string = 'VM-'
 
 @description('Flow log storage account name')
-param flowlogSt string = 'flowlog${toLower(utcNow())}'
+param flowlogSt string = 'flowlog${toLower(rgName)}'
 
 //var customImageId = '/subscriptions/0245be41-c89b-4b46-a3cc-a705c90cd1e8/resourceGroups/image-gallery-rg/providers/Microsoft.Compute/galleries/mddimagegallery/images/windows2019-networktools/versions/2.0.0'
 
@@ -48,7 +48,7 @@ var imageOffer = 'WindowsServer'
 var imageSku = '2022-Datacenter'
 
 /*=============================================================SPOKE VNETS========================================================================================*/
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in range(1, copies-1): {
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in range(0, copies): {
   name: '${virtualNetworkName}${i}'
   location: location
   tags:{
@@ -73,23 +73,6 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           }
         }
       }
-    ]
-  }
-}]
-/*=============================================================HUB VNETS========================================================================================*/
-resource virtualNetworkHub 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in [0,copies]: {
-  name: '${virtualNetworkName}${i}'
-  location: location
-  tags:{
-    group: (i<copies/2 ? virtualNetworkTagGr1 : virtualNetworkTagGr2)
-  }
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        '10.0.${i}.0/24'
-      ]
-    }
-    subnets: [
       {
         name: subnetName
         properties: {
@@ -178,12 +161,12 @@ resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   kind: 'StorageV2'
 }
 /*=============================================================FIREWALLS========================================================================================*/
-resource hubfirewall1 'Microsoft.Network/azureFirewalls@2024-05-01' = {
-  name: 'hubfirewall-0'
+resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [0, copies]: {
+  name: 'hubfirewall-${i}'
   location: location
   dependsOn:[
     flowlogst
-    virtualNetworkHub
+
     hubfirewallpip
     hubfirewallmanagementpip
   ]
@@ -228,59 +211,7 @@ resource hubfirewall1 'Microsoft.Network/azureFirewalls@2024-05-01' = {
       id: hubfirewallpolicy.id
     }
   }
-}
-resource hubfirewall2 'Microsoft.Network/azureFirewalls@2024-03-01' = {
-  name: 'hubfirewall-${copies}'
-  location: location
-  dependsOn:[
-    flowlogst
-    virtualNetworkHub
-    hubfirewallpip
-    hubfirewallmanagementpip
-    hubfirewall1
-  ]
-  tags:{
-    group: virtualNetworkTagGr2
-  }
-  zones: [
-    '1'
-    '2'
-    '3'
-  ]
-  properties: {
-    ipConfigurations: [
-      {
-        name: 'ipConfig'
-        properties: {
-          subnet: {
-            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${copies}', firewallsubnetName)
-          }
-          publicIPAddress: {
-              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-${copies}')
-            }
-          }
-        }
-      ]
-    managementIpConfiguration: {
-        name: 'managementIpConfig'
-        properties: {
-          subnet: {
-            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${copies}', firewallmanagementsubnetName)
-          }
-          publicIPAddress: {
-              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-${copies}')
-            }
-          }   
-        }
-    sku: {
-      tier: 'Premium'
-      name: 'AZFW_VNet'
-    }
-    firewallPolicy: {
-      id: hubfirewallpolicy.id
-    }
-  }
-}
+}]
 resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]: {
   name: 'hubfirewallpip-${i}'
   location: location
@@ -315,7 +246,6 @@ resource hubfirewallmanagementpip 'Microsoft.Network/publicIPAddresses@2022-09-0
     publicIPAllocationMethod: 'Static'
   }
 }]
-
 /*=============================================================FIREWALL POLICY========================================================================================*/
 resource hubfirewallpolicy 'Microsoft.Network/firewallPolicies@2024-03-01' = {
   name: 'hubfirewallpolicy'
@@ -670,7 +600,6 @@ resource prodhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigu
   parent: avnm
   dependsOn:[
     virtualNetwork
-    virtualNetworkHub
   ]
   properties: {
     appliesToGroups: [
@@ -685,7 +614,7 @@ resource prodhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigu
     hubs: [
       {
         resourceType: 'Microsoft.Network/virtualNetworks'
-        resourceId: virtualNetworkHub[0].id
+        resourceId: virtualNetwork[0].id
       }
       
     ]
@@ -712,7 +641,7 @@ resource devhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigur
     hubs: [
       {
         resourceType: 'Microsoft.Network/virtualNetworks'
-        resourceId: virtualNetworkHub[copies].id
+        resourceId: virtualNetwork[copies].id
       }
       
     ]
