@@ -54,7 +54,7 @@ resource prefix 'Microsoft.Network/publicIPPrefixes@2024-05-01' = {
     name: 'Standard'
   }
   properties: {
-    prefixLength: 27
+    prefixLength: 28
   }
 }
 /*=============================================================SPOKE VNETS========================================================================================*/
