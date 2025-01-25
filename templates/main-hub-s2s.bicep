@@ -47,7 +47,7 @@ var imagePublisher = 'MicrosoftWindowsServer'
 var imageOffer = 'WindowsServer'
 var imageSku = '2022-Datacenter'
 
-
+/*=============================================================SPOKE VNETS========================================================================================*/
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in range(1, copies-1): {
   name: '${virtualNetworkName}${i}'
   location: location
@@ -76,6 +76,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
     ]
   }
 }]
+/*=============================================================HUB VNETS========================================================================================*/
 resource virtualNetworkHub 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in [0,copies]: {
   name: '${virtualNetworkName}${i}'
   location: location
@@ -140,7 +141,7 @@ resource virtualNetworkHub 'Microsoft.Network/virtualNetworks@2019-09-01' = [for
     ]
   }
 }]
-
+/*=============================================================NSG========================================================================================*/
 resource avnmnsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
   name: 'anvm-nsg'
   location: location
@@ -167,6 +168,7 @@ resource avnmnsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
     ]
   }
 }
+/*=============================================================STORAGE========================================================================================*/
 resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: flowlogSt
   location: location
@@ -175,13 +177,13 @@ resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
   kind: 'StorageV2'
 }
-
-resource hubfirewall1 'Microsoft.Network/azureFirewalls@2024-03-01' = {
+/*=============================================================FIREWALLS========================================================================================*/
+resource hubfirewall1 'Microsoft.Network/azureFirewalls@2024-05-01' = {
   name: 'hubfirewall-0'
   location: location
   dependsOn:[
     flowlogst
-    virtualNetwork
+    virtualNetworkHub
     hubfirewallpip
     hubfirewallmanagementpip
   ]
@@ -232,7 +234,7 @@ resource hubfirewall2 'Microsoft.Network/azureFirewalls@2024-03-01' = {
   location: location
   dependsOn:[
     flowlogst
-    virtualNetwork
+    virtualNetworkHub
     hubfirewallpip
     hubfirewallmanagementpip
     hubfirewall1
@@ -313,6 +315,8 @@ resource hubfirewallmanagementpip 'Microsoft.Network/publicIPAddresses@2022-09-0
     publicIPAllocationMethod: 'Static'
   }
 }]
+
+/*=============================================================FIREWALL POLICY========================================================================================*/
 resource hubfirewallpolicy 'Microsoft.Network/firewallPolicies@2024-03-01' = {
   name: 'hubfirewallpolicy'
   location: location
@@ -363,7 +367,7 @@ resource hubfirewallpolicy_RuleCollectionGroup 'Microsoft.Network/firewallPolici
     ]
   }
 }  
-
+/*=============================================================BASTIONS========================================================================================*/
 resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,copies]: {
   name: 'hubbastion-${i}'
   dependsOn:[
@@ -408,6 +412,7 @@ resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
     publicIPAllocationMethod: 'Static'
   }
 }]
+/*=============================================================VNET GATEWAYS========================================================================================*/
 resource hubgw 'Microsoft.Network/virtualNetworkGateways@2022-09-01' = [for i in [0,copies]:{
   name: 'hubgw-${i}'
   location: location
@@ -504,6 +509,7 @@ resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
     publicIPAllocationMethod: 'Static'
   }
 }]
+/*=============================================================VIRTUAL MACHINES========================================================================================*/
 resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
   name: '${nicName}${i}'
   location: location
@@ -569,7 +575,6 @@ resource vm 'Microsoft.Compute/virtualMachines@2018-10-01' = [for i in [0,1,2,(c
     nic
   ]
 }]
-
 resource vmName_Microsoft_Azure_NetworkWatcher 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
   name: '${vmName}${i}/Microsoft.Azure.NetworkWatcher'
   location: location
@@ -583,7 +588,6 @@ resource vmName_Microsoft_Azure_NetworkWatcher 'Microsoft.Compute/virtualMachine
     vm
   ]
 }]
-
 resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
   name: '${vmName}${i}/IISExtension'
   location: location
@@ -602,7 +606,7 @@ resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-
     vm
    ]
 }]
-
+/*===================================AVNM============================================================*/
 resource avnm 'Microsoft.Network/networkManagers@2022-09-01' = {
   name: 'avnm'
   location: location
@@ -618,7 +622,6 @@ resource avnm 'Microsoft.Network/networkManagers@2022-09-01' = {
     }
   }
 }
-
 resource prodnetworkgr 'Microsoft.Network/networkManagers/networkGroups@2022-09-01' = {
   name: 'production-networkgroup'
   parent: avnm
@@ -650,8 +653,6 @@ resource networkgr1_static 'Microsoft.Network/networkManagers/networkGroups/stat
     resourceId: virtualNetwork[c].id
     } 
 }]
-
-
 resource networkgr2_static 'Microsoft.Network/networkManagers/networkGroups/staticMembers@2022-09-01' = [for c in range(copies/2,copies/2-1): {
   name: 'development_${c-(copies/2)}'
   parent: devnetworkgr
@@ -669,6 +670,7 @@ resource prodhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigu
   parent: avnm
   dependsOn:[
     virtualNetwork
+    virtualNetworkHub
   ]
   properties: {
     appliesToGroups: [
@@ -683,7 +685,7 @@ resource prodhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigu
     hubs: [
       {
         resourceType: 'Microsoft.Network/virtualNetworks'
-        resourceId: virtualNetwork[0].id
+        resourceId: virtualNetworkHub[0].id
       }
       
     ]
@@ -691,7 +693,6 @@ resource prodhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigu
     isGlobal: 'True'
   }
 }
-
 resource devhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigurations@2022-09-01' = {
   name: 'development-hubspokemesh'
   parent: avnm
@@ -711,7 +712,7 @@ resource devhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigur
     hubs: [
       {
         resourceType: 'Microsoft.Network/virtualNetworks'
-        resourceId: virtualNetwork[copies].id
+        resourceId: virtualNetworkHub[copies].id
       }
       
     ]
@@ -742,7 +743,6 @@ resource secadminrulecollall 'Microsoft.Network/networkManagers/securityAdminCon
     ] 
   }
 }
-
 resource nointernet 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2022-04-01-preview'= {
   name: 'no-internet'
   parent: secadminrulecollall
@@ -772,7 +772,6 @@ resource nointernet 'Microsoft.Network/networkManagers/securityAdminConfiguratio
     ]
   }
 }
-
 resource secadminrulecollprod 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections@2022-09-01' = {
   name: 'secadminrulecoll-production'
   parent: secadminrule
@@ -857,3 +856,4 @@ resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations
     ]
   }
 }]
+
