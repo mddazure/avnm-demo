@@ -184,7 +184,7 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [
             id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-0', firewallsubnetName)
           }
           publicIPAddress: {
-              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-0')
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-${i}')
             }
           }
         }
@@ -196,7 +196,7 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [
             id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-0', firewallmanagementsubnetName)
           }
           publicIPAddress: {
-              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-0')
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-${i}')
             }
           }   
         }
@@ -430,7 +430,7 @@ resource connhighlow 'Microsoft.Network/connections@2022-09-01' = {
   }
 }
 
-resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]:{
+resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies/2]:{
   name: 'hubgwpip-${i}'
   location: location
   sku: {
