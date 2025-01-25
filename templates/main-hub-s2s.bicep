@@ -79,8 +79,8 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
             id: avnmnsg.id
           }
         }
-      }
-      {
+      }    
+      (i==0 || i==copies/2?{
         name: gwsubnetName
         properties: {
           addressPrefix: '10.0.${i}.32/27'
@@ -88,8 +88,8 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
-      }      
-      {
+      }:{})     
+      (i==0 || i==copies/2?{
         name: firewallsubnetName
         properties: {
           addressPrefix: '10.0.${i}.64/26'
@@ -97,8 +97,8 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
-      }
-      {
+      }:{}) 
+      (i==0 || i==copies/2?{
         name: firewallmanagementsubnetName
         properties: {
           addressPrefix: '10.0.${i}.128/26'
@@ -106,8 +106,8 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
-      }
-      {
+      }:{})
+      (i==0 || i==copies/2?{
         name: bastionsubnetName
         properties: {
           addressPrefix: '10.0.${i}.192/26'
@@ -115,7 +115,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
           privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
-      }
+      }:{})
     ]
   }
 }]
@@ -155,7 +155,7 @@ resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   kind: 'StorageV2'
 }
 /*=============================================================FIREWALLS========================================================================================*/
-resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [0, copies]: {
+resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [0, copies/2]: {
   name: 'hubfirewall-${i}'
   location: location
   dependsOn:[
@@ -206,7 +206,7 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [
     }
   }
 }]
-resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]: {
+resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies/2]: {
   name: 'hubfirewallpip-${i}'
   location: location
   sku: {
@@ -226,7 +226,7 @@ resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for 
     }
   }
 }]
-resource hubfirewallmanagementpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]: {
+resource hubfirewallmanagementpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies/2]: {
   name: 'hubfirewallmanagementpip-${i}'
   location: location
   sku: {
@@ -298,7 +298,7 @@ resource hubfirewallpolicy_RuleCollectionGroup 'Microsoft.Network/firewallPolici
   }
 }  
 /*=============================================================BASTIONS========================================================================================*/
-resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,copies]: {
+resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,copies/2]: {
   name: 'hubbastion-${i}'
   dependsOn:[
     bastionpip
@@ -316,7 +316,7 @@ resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,c
         name: 'ipConf'
         properties: {
           publicIPAddress: {
-            id: bastionpip[((i<copies/2 ? 0 : 1))].id
+            id: bastionpip[((i==0 ? 0 : 1))].id
           }
           subnet: {
             id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', bastionsubnetName)
@@ -327,11 +327,12 @@ resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,c
   }
 }]
 
-resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]: {
+resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies/2]: {
   name: 'hubbastionpip-${i}'
   location: location
   sku: {
     name: 'Standard'
+    tier: 'Regional'
   }
   zones:[
     '1'
@@ -347,7 +348,7 @@ resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
   }
 }]
 /*=============================================================VNET GATEWAYS========================================================================================*/
-resource hubgw 'Microsoft.Network/virtualNetworkGateways@2022-09-01' = [for i in [0,copies]:{
+resource hubgw 'Microsoft.Network/virtualNetworkGateways@2022-09-01' = [for i in [0,copies/2]:{
   name: 'hubgw-${i}'
   location: location
   tags:{
@@ -467,7 +468,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2
     virtualNetwork
   ]
 }]
-resource vm 'Microsoft.Compute/virtualMachines@2018-10-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
+resource vm 'Microsoft.Compute/virtualMachines@2018-10-01' = [for i in [0,1,2,(copies/2),(copies/2+1),copies/2+2]: {
   name: '${vmName}${i}'
   location: location
   tags:{
@@ -512,7 +513,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2018-10-01' = [for i in [0,1,2,(c
     nic
   ]
 }]
-resource vmName_Microsoft_Azure_NetworkWatcher 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
+resource vmName_Microsoft_Azure_NetworkWatcher 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,(copies/2),(copies/2+1),copies/2+2]: {
   name: '${vmName}${i}/Microsoft.Azure.NetworkWatcher'
   location: location
   properties: {
@@ -525,7 +526,7 @@ resource vmName_Microsoft_Azure_NetworkWatcher 'Microsoft.Compute/virtualMachine
     vm
   ]
 }]
-resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,(copies-2),(copies-1),copies]: {
+resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-04-01' = [for i in [0,1,2,(copies/2),(copies/2+1),copies/2+2]: {
   name: '${vmName}${i}/IISExtension'
   location: location
   properties: {
