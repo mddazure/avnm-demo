@@ -594,7 +594,7 @@ resource networkgr1_static 'Microsoft.Network/networkManagers/networkGroups/stat
     resourceId: virtualNetwork[c].id
     } 
 }]
-resource networkgr2_static 'Microsoft.Network/networkManagers/networkGroups/staticMembers@2022-09-01' = [for c in range(copies/2,copies/2-1): {
+resource networkgr2_static 'Microsoft.Network/networkManagers/networkGroups/staticMembers@2022-09-01' = [for c in range(copies/2+1,copies/2-1): {
   name: 'development_${c-(copies/2)}'
   parent: devnetworkgr
   dependsOn:[
@@ -652,7 +652,7 @@ resource devhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigur
     hubs: [
       {
         resourceType: 'Microsoft.Network/virtualNetworks'
-        resourceId: virtualNetwork[copies].id
+        resourceId: virtualNetwork[copies/2].id
       }
       
     ]
