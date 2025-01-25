@@ -47,6 +47,13 @@ var imagePublisher = 'MicrosoftWindowsServer'
 var imageOffer = 'WindowsServer'
 var imageSku = '2022-Datacenter'
 
+resource prefix 'Microsoft.Network/publicIPPrefixes@2024-05-01' = {
+  name: 'prefix'
+  location: location
+  properties: {
+    prefixLength: 27
+  }
+}
 /*=============================================================SPOKE VNETS========================================================================================*/
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in range(0, copies): {
   name: '${virtualNetworkName}${i}'
@@ -135,7 +142,6 @@ resource avnmnsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
           sourcePortRange:'*'
         }
       }
-
     ]
   }
 }
@@ -215,6 +221,9 @@ resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for 
   properties: {
     publicIPAddressVersion: 'IPv4'
     publicIPAllocationMethod: 'Static'
+    publicIPPrefix: {
+      id: prefix.id
+    }
   }
 }]
 resource hubfirewallmanagementpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies]: {
@@ -232,6 +241,9 @@ resource hubfirewallmanagementpip 'Microsoft.Network/publicIPAddresses@2022-09-0
   properties: {
     publicIPAddressVersion: 'IPv4'
     publicIPAllocationMethod: 'Static'
+    publicIPPrefix: {
+      id: prefix.id
+    }
   }
 }]
 /*=============================================================FIREWALL POLICY========================================================================================*/
@@ -328,6 +340,10 @@ resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
   ]
   properties: {
     publicIPAllocationMethod: 'Static'
+    publicIPAddressVersion: 'IPv4'
+    publicIPPrefix: {
+      id: prefix.id
+    }
   }
 }]
 /*=============================================================VNET GATEWAYS========================================================================================*/
@@ -425,6 +441,9 @@ resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
   properties: {
     publicIPAddressVersion: 'IPv4'
     publicIPAllocationMethod: 'Static'
+    publicIPPrefix: {
+      id: prefix.id
+    }
   }
 }]
 /*=============================================================VIRTUAL MACHINES========================================================================================*/
