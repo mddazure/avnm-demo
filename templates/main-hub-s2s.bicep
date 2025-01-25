@@ -74,18 +74,6 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
         }
       }
       {
-        name: subnetName
-        properties: {
-          addressPrefix: '10.0.${i}.0/27'
-          delegations: []
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-          networkSecurityGroup: {
-            id: avnmnsg.id
-          }
-        }
-      }
-      {
         name: gwsubnetName
         properties: {
           addressPrefix: '10.0.${i}.32/27'
