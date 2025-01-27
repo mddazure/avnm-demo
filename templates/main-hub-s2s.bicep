@@ -181,7 +181,7 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [
         name: 'ipConfig'
         properties: {
           subnet: {
-            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-0', firewallsubnetName)
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallsubnetName)
           }
           publicIPAddress: {
               id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-${i}')
@@ -193,7 +193,7 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [
         name: 'managementIpConfig'
         properties: {
           subnet: {
-            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-0', firewallmanagementsubnetName)
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallmanagementsubnetName)
           }
           publicIPAddress: {
               id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-${i}')
