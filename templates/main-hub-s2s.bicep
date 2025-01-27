@@ -53,6 +53,11 @@ resource prefix 'Microsoft.Network/publicIPPrefixes@2024-05-01' = {
   sku: {
     name: 'Standard'
   }
+  zones:[
+      '1'
+      '2'
+      '3'
+    ]
   properties: {
     prefixLength: 28
   }
