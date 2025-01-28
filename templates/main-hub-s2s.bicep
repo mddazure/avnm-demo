@@ -553,13 +553,15 @@ resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-
    ]
 }]
 /*===================================AVNM============================================================*/
-resource avnm 'Microsoft.Network/networkManagers@2022-09-01' = {
+resource avnm 'Microsoft.Network/networkManagers@2024-05-01' = {
   name: 'avnm'
   location: location
   properties: {
     networkManagerScopeAccesses: [
       'Connectivity'
       'SecurityAdmin'
+      'SecurityUser'
+      'Routing'
     ]
     networkManagerScopes: {
       subscriptions: [
