@@ -5,12 +5,12 @@ param adminUsername string = 'AzureAdmin'
 param adminPassword string = 'ANMtest-2023'
 
 @description('Location for all resources.')
-param location string = 'swedencentral'
+param location string = resourceGroup().location
 
 @description('Number of VNETs and VMs to deploy')
 @minValue(1)
 @maxValue(254)
-param copies int = 20
+param copies int = 32
 
 param vmsize string = 'Standard_D2s_v5'
 
@@ -39,7 +39,7 @@ param nicName string = 'VMNic-'
 param vmName string = 'VM-'
 
 @description('Flow log storage account name')
-param flowlogSt string = 'flowlog${uniqueString(rgName)}'
+param flowlogSt string = 'flowlog${uniqueString(rgName,subscription().subscriptionId)}'
 
 //var customImageId = '/subscriptions/0245be41-c89b-4b46-a3cc-a705c90cd1e8/resourceGroups/image-gallery-rg/providers/Microsoft.Compute/galleries/mddimagegallery/images/windows2019-networktools/versions/2.0.0'
 
@@ -47,6 +47,7 @@ var imagePublisher = 'MicrosoftWindowsServer'
 var imageOffer = 'WindowsServer'
 var imageSku = '2022-Datacenter'
 
+//*=============================================================PUBLIC IP PREFIX========================================================================================
 resource prefix 'Microsoft.Network/publicIPPrefixes@2024-05-01' = {
   name: 'prefix'
   location: location
@@ -62,8 +63,8 @@ resource prefix 'Microsoft.Network/publicIPPrefixes@2024-05-01' = {
     prefixLength: 28
   }
 }
-/*=============================================================SPOKE VNETS========================================================================================*/
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i in range(0, copies): {
+//=============================================================SPOKE VNETS========================================================================================
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-05-01' = [for i in range(0, copies): {
   name: '${virtualNetworkName}${i}'
   location: location
   tags:{
@@ -87,47 +88,66 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2019-09-01' = [for i 
             id: avnmnsg.id
           }
         }
-      }    
-      {
-        name: gwsubnetName
-        properties: {
-          addressPrefix: '10.0.${i}.32/27'
-          delegations: []
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-        }
-      }   
-      {
-        name: firewallsubnetName
-        properties: {
-          addressPrefix: '10.0.${i}.64/26'
-          delegations: []
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-        }
-      }
-      {
-        name: firewallmanagementsubnetName
-        properties: {
-          addressPrefix: '10.0.${i}.128/26'
-          delegations: []
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-        }
-      }
-      {
-        name: bastionsubnetName
-        properties: {
-          addressPrefix: '10.0.${i}.192/26'
-          delegations: []
-          privateEndpointNetworkPolicies: 'Enabled'
-          privateLinkServiceNetworkPolicies: 'Enabled'
-        }
-      }
-    ]
+      }]
+    }   
+}] 
+resource gwsubnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' = [for i in [0, copies/2]: {
+  parent: virtualNetwork[i]
+  name: gwsubnetName
+  dependsOn: [
+    virtualNetwork
+    firewallsubnet
+    firewallmanagementsubnet
+    bastionsubnet
+  ]
+  properties: {
+    addressPrefix: '10.0.${i}.32/27'
+    delegations: []
+    privateEndpointNetworkPolicies: 'Enabled'
+    privateLinkServiceNetworkPolicies: 'Enabled'
   }
 }]
-/*=============================================================NSG========================================================================================*/
+resource firewallsubnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' = [for i in [0,copies/2]: {
+  parent: virtualNetwork[i]
+  name: firewallsubnetName
+  dependsOn:[
+    virtualNetwork
+  ]
+  properties: {
+    addressPrefix: '10.0.${i}.64/26'
+    delegations: []
+    privateEndpointNetworkPolicies: 'Enabled'
+    privateLinkServiceNetworkPolicies: 'Enabled'
+  }
+}]
+resource firewallmanagementsubnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' = [for i in [0,copies/2]: {
+  parent: virtualNetwork[i]
+  name: firewallmanagementsubnetName
+  dependsOn:[
+    firewallsubnet
+  ]
+  properties: {
+    addressPrefix: '10.0.${i}.128/26'
+    delegations: []
+    privateEndpointNetworkPolicies: 'Enabled'
+    privateLinkServiceNetworkPolicies: 'Enabled'
+  }
+}]
+resource bastionsubnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' = [for i in [0,copies/2]: {
+  parent: virtualNetwork[i]
+  name: bastionsubnetName
+  dependsOn:[
+    firewallmanagementsubnet
+  ]
+  properties: {
+    addressPrefix: '10.0.${i}.192/26'
+    delegations: []
+    privateEndpointNetworkPolicies: 'Enabled'
+    privateLinkServiceNetworkPolicies: 'Enabled'
+  }
+}]
+
+//=============================================================NSG========================================================================================
 resource avnmnsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
   name: 'anvm-nsg'
   location: location
@@ -153,7 +173,7 @@ resource avnmnsg 'Microsoft.Network/networkSecurityGroups@2022-09-01' = {
     ]
   }
 }
-/*=============================================================STORAGE========================================================================================*/
+//=============================================================STORAGE========================================================================================
 resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   name: flowlogSt
   location: location
@@ -162,13 +182,16 @@ resource flowlogst 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
   kind: 'StorageV2'
 }
-/*=============================================================FIREWALLS========================================================================================*/
-resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [0, copies/2]: {
-  name: 'hubfirewall-${i}'
+//=============================================================FIREWALLS========================================================================================
+resource hubfirewall0 'Microsoft.Network/azureFirewalls@2024-05-01' =  {
+  name: 'hubfirewall-0'
   location: location
   dependsOn:[
+    virtualNetwork
+    firewallsubnet
+    firewallmanagementsubnet
     flowlogst
-
+    hubfirewallpolicy
     hubfirewallpip
     hubfirewallmanagementpip
   ]
@@ -186,10 +209,10 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [
         name: 'ipConfig'
         properties: {
           subnet: {
-            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallsubnetName)
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-0', firewallsubnetName)
           }
           publicIPAddress: {
-              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-${i}')
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-0')
             }
           }
         }
@@ -198,10 +221,10 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [
         name: 'managementIpConfig'
         properties: {
           subnet: {
-            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${i}', firewallmanagementsubnetName)
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-0', firewallmanagementsubnetName)
           }
           publicIPAddress: {
-              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-${i}')
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-0')
             }
           }   
         }
@@ -213,7 +236,63 @@ resource hubfirewall 'Microsoft.Network/azureFirewalls@2024-05-01' = [for i in [
       id: hubfirewallpolicy.id
     }
   }
-}]
+}
+resource hubfirewall1 'Microsoft.Network/azureFirewalls@2024-05-01' =  {
+  name: 'hubfirewall-${copies/2}'
+  location: location
+  dependsOn:[
+    virtualNetwork
+    firewallsubnet
+    firewallmanagementsubnet
+    hubfirewall0
+    flowlogst
+    hubfirewallpolicy
+    hubfirewallpip
+    hubfirewallmanagementpip
+  ]
+  tags:{
+    group: virtualNetworkTagGr1
+  }
+  zones: [
+    '1'
+    '2'
+    '3'
+  ]
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipConfig'
+        properties: {
+          subnet: {
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${copies/2}', firewallsubnetName)
+          }
+          publicIPAddress: {
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallpip-${copies/2}')
+            }
+          }
+        }
+      ]
+    managementIpConfiguration: {
+        name: 'managementIpConfig'
+        properties: {
+          subnet: {
+            id: resourceId(rgName, 'Microsoft.Network/virtualNetworks/subnets', 'anm-vnet-${copies/2}', firewallmanagementsubnetName)
+          }
+          publicIPAddress: {
+              id: resourceId('Microsoft.Network/publicIPAddresses', 'hubfirewallmanagementpip-${copies/2}')
+            }
+          }   
+        }
+    sku: {
+      tier: 'Premium'
+      name: 'AZFW_VNet'
+    }
+    firewallPolicy: {
+      id: hubfirewallpolicy.id
+    }
+  }
+}
+
 resource hubfirewallpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in [0,copies/2]: {
   name: 'hubfirewallpip-${i}'
   location: location
@@ -254,7 +333,7 @@ resource hubfirewallmanagementpip 'Microsoft.Network/publicIPAddresses@2022-09-0
     }
   }
 }]
-/*=============================================================FIREWALL POLICY========================================================================================*/
+//=============================================================FIREWALL POLICY========================================================================================
 resource hubfirewallpolicy 'Microsoft.Network/firewallPolicies@2024-03-01' = {
   name: 'hubfirewallpolicy'
   location: location
@@ -305,12 +384,13 @@ resource hubfirewallpolicy_RuleCollectionGroup 'Microsoft.Network/firewallPolici
     ]
   }
 }  
-/*=============================================================BASTIONS========================================================================================*/
+//=============================================================BASTIONS========================================================================================
 resource hubbastion 'Microsoft.Network/bastionHosts@2022-09-01' = [for i in [0,copies/2]: {
   name: 'hubbastion-${i}'
   dependsOn:[
     bastionpip
     virtualNetwork
+    bastionsubnet
   ]
   location: location
   sku: {
@@ -355,7 +435,7 @@ resource bastionpip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
     }
   }
 }]
-/*=============================================================VNET GATEWAYS========================================================================================*/
+//=============================================================VNET GATEWAYS==============================================================
 resource hubgw 'Microsoft.Network/virtualNetworkGateways@2022-09-01' = [for i in [0,copies/2]:{
   name: 'hubgw-${i}'
   location: location
@@ -363,6 +443,7 @@ resource hubgw 'Microsoft.Network/virtualNetworkGateways@2022-09-01' = [for i in
     group: (i<copies/2 ? virtualNetworkTagGr1 : virtualNetworkTagGr2)
   }
   dependsOn: [
+    gwsubnet
     hubgwpubip
     virtualNetwork
   ]
@@ -455,7 +536,7 @@ resource hubgwpubip 'Microsoft.Network/publicIPAddresses@2022-09-01' = [for i in
     }
   }
 }]
-/*=============================================================VIRTUAL MACHINES========================================================================================*/
+//=============================================================VIRTUAL MACHINES===========================================================
 resource nic 'Microsoft.Network/networkInterfaces@2019-09-01' = [for i in [0,1,2,(copies/2),(copies/2+1),copies/2+2]: {
   name: '${nicName}${i}'
   location: location
@@ -552,7 +633,7 @@ resource vmName_IISExtension 'Microsoft.Compute/virtualMachines/extensions@2021-
     vm
    ]
 }]
-/*===================================AVNM============================================================*/
+//===================================AVNM============================================================
 resource avnm 'Microsoft.Network/networkManagers@2024-05-01' = {
   name: 'avnm'
   location: location
@@ -803,4 +884,59 @@ resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations
     ]
   }
 }]
+
+resource routingconfig 'Microsoft.Network/networkManagers/routingConfigurations@2024-05-01' = {
+  name: 'routingconfig'
+  parent: avnm
+}
+resource routingrulecollprod 'Microsoft.Network/networkManagers/routingConfigurations/ruleCollections@2024-05-01' = {
+  name: 'routingrulecoll-production'
+  parent: routingconfig
+  properties: {
+    appliesTo: [
+      {
+        networkGroupId: prodnetworkgr.id
+      }
+    ] 
+  }
+}
+resource routingrulecolldev 'Microsoft.Network/networkManagers/routingConfigurations/ruleCollections@2024-05-01' = {
+  name: 'routingrulecoll-development'
+  parent: routingconfig
+  properties: {
+    appliesTo: [
+      {
+        networkGroupId: devnetworkgr.id
+      }
+    ] 
+  }
+}
+resource routingruleprod 'Microsoft.Network/networkManagers/routingConfigurations/ruleCollections/rules@2024-05-01'=  {
+  name: 'routingrule-prod-to-dev'
+  parent: routingrulecollprod
+  properties: {
+    destination:{
+      destinationAddress: '10.0.16.0/20'
+      type: 'AddressPrefix'
+    }
+    nextHop:{
+      nextHopType: 'VirtualAppliance'
+      nextHopAddress: hubfirewall0.properties.ipConfigurations[0].properties.privateIPAddress
+    }
+  }
+}
+resource routingruledev 'Microsoft.Network/networkManagers/routingConfigurations/ruleCollections/rules@2024-05-01'= {
+  name: 'routingrule-dev-to-prod'
+  parent: routingrulecolldev
+  properties: {
+    destination:{
+      destinationAddress: '10.0.0.0/20'
+      type: 'AddressPrefix'
+    }
+    nextHop:{
+      nextHopType: 'VirtualAppliance'
+      nextHopAddress: hubfirewall1.properties.ipConfigurations[0].properties.privateIPAddress
+    }
+  }
+}
 
