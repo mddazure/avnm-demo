@@ -817,7 +817,7 @@ resource allowwithinprod 'Microsoft.Network/networkManagers/securityAdminConfigu
   kind: 'Custom'
   properties: {
     priority: 300
-    access: 'allow'
+    access: 'AlwaysAllow'
     direction: 'Outbound'
     protocol: 'Any'
     sourcePortRanges:[
@@ -846,7 +846,7 @@ resource allowprodtodev 'Microsoft.Network/networkManagers/securityAdminConfigur
   kind: 'Custom'
   properties: {
     priority: 300
-    access: 'allow'
+    access: 'AlwaysAllow'
     direction: 'Outbound'
     protocol: 'Any'
     sourcePortRanges:[
@@ -919,7 +919,7 @@ resource allowwithindev 'Microsoft.Network/networkManagers/securityAdminConfigur
   kind: 'Custom'
   properties: {
     priority: 300
-    access: 'allow'
+    access: 'AlwaysAllow'
     direction: 'Outbound'
     protocol: 'Any'
     sourcePortRanges:[
@@ -948,7 +948,7 @@ resource allowdevtoprod 'Microsoft.Network/networkManagers/securityAdminConfigur
   kind: 'Custom'
   properties: {
     priority: 300
-    access: 'allow'
+    access: 'AlwaysAllow'
     direction: 'Outbound'
     protocol: 'Any'
     sourcePortRanges:[
