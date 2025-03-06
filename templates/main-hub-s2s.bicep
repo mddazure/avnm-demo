@@ -749,10 +749,11 @@ resource devhubspokemesh 'Microsoft.Network/networkManagers/connectivityConfigur
   }
 }
 
-resource secadminrule 'Microsoft.Network/networkManagers/securityAdminConfigurations@2022-09-01' = {
+resource secadminrule 'Microsoft.Network/networkManagers/securityAdminConfigurations@2024-05-01' = {
   name: 'secadminrule'
   parent: avnm
   properties: {    
+    networkGroupAddressSpaceAggregationOption: 'Manual'
   }
 }
 
