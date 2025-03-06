@@ -800,7 +800,7 @@ resource nointernet 'Microsoft.Network/networkManagers/securityAdminConfiguratio
     ]
   }
 }
-resource secadminrulecollprod 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections@2022-09-01' = {
+resource secadminrulecollprod 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections@2024-05-01' = {
   name: 'secadminrulecoll-production'
   parent: secadminrule
   properties: {
@@ -811,8 +811,67 @@ resource secadminrulecollprod 'Microsoft.Network/networkManagers/securityAdminCo
     ] 
   }
 }
+resource allowwithinprod 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2024-05-01'=  {
+  name: 'allowwithinprod'
+  parent: secadminrulecollprod
+  kind: 'Custom'
+  properties: {
+    priority: 300
+    access: 'allow'
+    direction: 'Outbound'
+    protocol: 'Any'
+    sourcePortRanges:[
+      '0-65535'
+    ]
+    destinationPortRanges:[
+      '0-65535'
+    ]
+    sources: [
+      {
+        addressPrefixType: 'NetworkGroup'
+        addressPrefix: prodnetworkgr.id
+      }
+    ]
+    destinations: [
+      {
+        addressPrefixType: 'NetworkGroup'
+        addressPrefix: prodnetworkgr.id
+      }
+    ]
+  }
+}
+resource allowprodtodev 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2024-05-01'=  {
+  name: 'allowprodtodev'
+  parent: secadminrulecollprod
+  kind: 'Custom'
+  properties: {
+    priority: 300
+    access: 'allow'
+    direction: 'Outbound'
+    protocol: 'Any'
+    sourcePortRanges:[
+      '0-65535'
+    ]
+    destinationPortRanges:[
+      '0-65535'
+    ]
+    sources: [
+      {
+        addressPrefixType: 'NetworkGroup'
+        addressPrefix: prodnetworkgr.id
+      }
+    ]
+    destinations: [
+      {
+        addressPrefixType: 'NetworkGroup'
+        addressPrefix: devnetworkgr.id
+      }
+    ]
+  }
+}
 
-resource allowprod 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2022-04-01-preview'= [for c in range(0,copies/2): {
+
+/*resource allowprod 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2022-04-01-preview'= [for c in range(0,copies/2): {
   name: 'allowprod-${c}'
   parent: secadminrulecollprod
   kind: 'Custom'
@@ -840,7 +899,7 @@ resource allowprod 'Microsoft.Network/networkManagers/securityAdminConfiguration
       }
     ]
   }
-}]
+}]*/
 
 resource secadminrulecolldev 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections@2022-09-01' = {
   name: 'secadminrulecoll-development'
@@ -854,8 +913,67 @@ resource secadminrulecolldev 'Microsoft.Network/networkManagers/securityAdminCon
     ] 
   }
 }
+resource allowwithindev 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2024-05-01'=  {
+  name: 'allowwithindev'
+  parent: secadminrulecolldev
+  kind: 'Custom'
+  properties: {
+    priority: 300
+    access: 'allow'
+    direction: 'Outbound'
+    protocol: 'Any'
+    sourcePortRanges:[
+      '0-65535'
+    ]
+    destinationPortRanges:[
+      '0-65535'
+    ]
+    sources: [
+      {
+        addressPrefixType: 'NetworkGroup'
+        addressPrefix: devnetworkgr.id
+      }
+    ]
+    destinations: [
+      {
+        addressPrefixType: 'NetworkGroup'
+        addressPrefix: devnetworkgr.id
+      }
+    ]
+  }
+}
+resource allowdevtoprod 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2024-05-01'=  {
+  name: 'allowdevtoprod'
+  parent: secadminrulecolldev
+  kind: 'Custom'
+  properties: {
+    priority: 300
+    access: 'allow'
+    direction: 'Outbound'
+    protocol: 'Any'
+    sourcePortRanges:[
+      '0-65535'
+    ]
+    destinationPortRanges:[
+      '0-65535'
+    ]
+    sources: [
+      {
+        addressPrefixType: 'NetworkGroup'
+        addressPrefix: devnetworkgr.id
+      }
+    ]
+    destinations: [
+      {
+        addressPrefixType: 'NetworkGroup'
+        addressPrefix: prodnetworkgr.id
+      }
+    ]
+  }
+}
 
-resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2022-04-01-preview'= [for c in range(copies/2,copies): {
+
+/*resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations/ruleCollections/rules@2022-04-01-preview'= [for c in range(copies/2,copies): {
   name: 'allowdev-${c}'
   parent: secadminrulecolldev
   kind: 'Custom'
@@ -883,7 +1001,7 @@ resource allowdev 'Microsoft.Network/networkManagers/securityAdminConfigurations
       }
     ]
   }
-}]
+}]*/
 
 resource routingconfig 'Microsoft.Network/networkManagers/routingConfigurations@2024-05-01' = {
   name: 'routingconfig'
